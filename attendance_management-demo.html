@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Attendance</title>
+<script>
+/* デモ用 i18n（window.KintaiI18n）: 日本語 / English */
+(function(){
+  var JP = {
+    title:'勤怠管理', logo:'勤', footer:'デモ版：データはこのブラウザ内にのみ保存されます',
+    me:'自分', admin:'管理', rep:'代表者', member:'メンバー', address:'アドレス', language:'言語',
+    today:'今日', all:'全員', back:'戻る', cancel:'キャンセル', save:'保存', saved:'保存しました', edit:'編集', editLog:'編集',
+    sync:'同期中…', syncWait:'同期中です。少しお待ちください',
+    in:'出勤', out:'退勤', bstart:'休憩開始', bend:'休憩終了', undoBtn:'退勤を取り消す', completed:'本日の勤務は終了しました',
+    inSaved:'出勤を記録しました（{time}）', outSaved:'退勤を記録しました（{time}）',
+    breakStarted:'休憩を開始しました（{time}）', breakEnded:'休憩を終了しました（{time}）', undoSaved:'退勤を取り消しました',
+    notIn:'未出勤', working:'勤務中', onBreak:'休憩中', done:'退勤済', noRecord:'記録なし', open:'退勤未登録',
+    work:'出勤', holiday:'休日', absent:'欠勤', paid:'有給', unset:'未設定', unsetBtn:'未設定', leave:'休暇・欠勤', status:'ステータス',
+    breakLabel:'休憩', workLabel:'実働', noBreak:'休憩なし', breakMulti:'休憩（複数登録可）', breakRecords:'休憩記録', noBreakRecords:'休憩の記録はありません',
+    addBreak:'＋ 休憩を追加', tracking:'計測中', total:'合計 {n}分', minutes:'{n}分', days:'{n}日',
+    breakTime:'休憩時間', workTime:'実働時間', workCalc:'実働（自動計算）', totalWork:'総実働', totalBreak:'総休憩', workDays:'出勤日数', avg:'平均',
+    inTime:'出勤時刻', outTime:'退勤時刻', note:'メモ', noteToday:'今日のメモ', notePlaceholder:'メモ（任意）', noteEditPlaceholder:'メモ（任意）',
+    editDate:'{date}', editTitle:'勤怠を編集', recordFor:'{date} の記録', repEdited:'{name}が編集',
+    inBad:'出勤時刻が正しくありません', outBad:'退勤時刻が正しくありません', breakStartBad:'休憩開始の時刻が正しくありません', breakEndBad:'休憩終了の時刻が正しくありません',
+    noPermission:'編集する権限がありません', noPermissionOther:'他のメンバーの記録は代表者のみ編集できます',
+    monthRecords:'今月の記録', monthHint1:'日付をタップすると記録を編集できます。', monthHint2:'退勤を忘れた日も後から修正できます。',
+    day:'日別', monthStats:'月別集計', log:'操作ログ', logHint:'直近の操作を表示しています。', noPunch:'打刻はまだありません',
+    memberCount:'メンバー（{n}名）', noMembers:'まだメンバーがいません', monthly:'月次', memberMonth:'{name} の月次記録',
+    adminHint1:'メンバーの「月次」をタップすると詳細を確認できます。', adminHint2:'打刻の修正は代表者のみ可能です。',
+    monthAdminHint:'休日・欠勤・有給の日は出勤日数に含まれません。', lastAction:'{action} {time}',
+    repUnset:'代表者が未設定です', repHint:'代表者になると、メンバー全員の勤怠を確認・編集できます。', claim:'代表者になる',
+    shared:'勤怠データは共有されています', repSettings:'代表者の設定', repHintChange:'代表者を別のメンバーに引き継ぐか、辞めることができます。',
+    transfer:'引き継ぐ', release:'代表者を辞める', noOthers:'他のメンバーがいません',
+    csv:'CSV出力', csvAll:'全員CSV', csvSaved:'CSVを保存しました',
+    date:'日付', weekday:'曜日', csvBreak:'休憩(分)', csvWorkMin:'実働(分)', csvWorkHour:'実働(時間)',
+    clear:'自分のデータを削除', clearHint:'あなたの勤怠記録をすべて削除します。この操作は取り消せません。', cleared:'削除しました', deleteTitle:'本当に削除しますか？', deleteBtn:'削除する'
+  };
+  var EN = {
+    title:'Attendance', logo:'A', footer:'Demo: data is stored only in this browser',
+    me:'Me', admin:'Admin', rep:'Representative', member:'Member', address:'Address', language:'Language',
+    today:'Today', all:'Everyone', back:'Back', cancel:'Cancel', save:'Save', saved:'Saved', edit:'Edit', editLog:'edited',
+    sync:'Syncing…', syncWait:'Still syncing. Please wait a moment.',
+    in:'Clock in', out:'Clock out', bstart:'Start break', bend:'End break', undoBtn:'Undo clock-out', completed:'Today\'s work is finished',
+    inSaved:'Clocked in ({time})', outSaved:'Clocked out ({time})', breakStarted:'Break started ({time})', breakEnded:'Break ended ({time})', undoSaved:'Clock-out undone',
+    notIn:'Not in', working:'Working', onBreak:'On break', done:'Done', noRecord:'No record', open:'No clock-out',
+    work:'Work', holiday:'Day off', absent:'Absent', paid:'Paid leave', unset:'Unset', unsetBtn:'Unset', leave:'Leave / absent', status:'Status',
+    breakLabel:'Break', workLabel:'Worked', noBreak:'No break', breakMulti:'Breaks (multiple allowed)', breakRecords:'Breaks', noBreakRecords:'No breaks recorded',
+    addBreak:'+ Add break', tracking:'In progress', total:'Total {n} min', minutes:'{n} min', days:'{n} days',
+    breakTime:'Break time', workTime:'Work time', workCalc:'Worked (auto)', totalWork:'Total work', totalBreak:'Total break', workDays:'Days worked', avg:'Average',
+    inTime:'Clock-in time', outTime:'Clock-out time', note:'Note', noteToday:'Today\'s note', notePlaceholder:'Note (optional)', noteEditPlaceholder:'Note (optional)',
+    editDate:'{date}', editTitle:'Edit record', recordFor:'Record for {date}', repEdited:'edited by {name}',
+    inBad:'Invalid clock-in time', outBad:'Invalid clock-out time', breakStartBad:'Invalid break start time', breakEndBad:'Invalid break end time',
+    noPermission:'You don\'t have permission to edit this', noPermissionOther:'Only the representative can edit other members\' records',
+    monthRecords:'This month', monthHint1:'Tap a day to edit its record.', monthHint2:'You can fix a forgotten clock-out later.',
+    day:'Daily', monthStats:'Monthly', log:'Log', logHint:'Showing recent activity.', noPunch:'No punches yet',
+    memberCount:'Members ({n})', noMembers:'No members yet', monthly:'Monthly', memberMonth:'{name} – monthly',
+    adminHint1:'Tap "Monthly" on a member to see details.', adminHint2:'Only the representative can correct punches.',
+    monthAdminHint:'Days off, absences and paid leave are not counted as days worked.', lastAction:'{action} {time}',
+    repUnset:'No representative set', repHint:'The representative can view and edit everyone\'s attendance.', claim:'Become representative',
+    shared:'attendance data is shared', repSettings:'Representative settings', repHintChange:'Hand the role to another member, or step down.',
+    transfer:'Hand over', release:'Step down', noOthers:'No other members',
+    csv:'Export CSV', csvAll:'CSV (all)', csvSaved:'CSV saved',
+    date:'Date', weekday:'Day', csvBreak:'Break (min)', csvWorkMin:'Worked (min)', csvWorkHour:'Worked (h)',
+    clear:'Delete my data', clearHint:'This deletes all of your attendance records and cannot be undone.', cleared:'Deleted', deleteTitle:'Delete everything?', deleteBtn:'Delete'
+  };
+  var L = {jp:JP, en:EN}, LOC = {jp:'ja-JP', en:'en-US'};
+  var lang = 'jp';
+  try{ var sv = localStorage.getItem('kintai-lang'); if(L[sv]) lang = sv; else if(/^en/i.test(navigator.language||'')) lang='en'; }catch(e){}
+  function apply(){ document.documentElement.lang = lang==='jp' ? 'ja' : 'en'; }
+  apply();
+  window.KintaiI18n = {
+    languages: [['jp','日本語'],['en','English']],
+    get language(){ return lang; },
+    setLanguage: function(c){ if(!L[c]) return; lang=c; try{localStorage.setItem('kintai-lang',c)}catch(e){} apply(); },
+    locale: function(){ return LOC[lang]; },
+    t: function(k, p){
+      var s = (L[lang][k] != null ? L[lang][k] : (JP[k] != null ? JP[k] : k));
+      if(p) for(var x in p) s = s.split('{'+x+'}').join(p[x] == null ? '' : p[x]);
+      return s;
+    },
+    weekday: function(d){ return d.toLocaleDateString(LOC[lang], {weekday:'short'}); },
+    dateText: function(d, monthOnly){
+      return monthOnly
+        ? d.toLocaleDateString(LOC[lang], {year:'numeric', month:'long'})
+        : d.toLocaleDateString(LOC[lang], {year:'numeric', month:'short', day:'numeric', weekday:'short'});
+    }
+  };
+})();
+</script>
+<style>
+:root{--bg:#fff;--surface:#fafafa;--card:#fff;--border:#e5e5e5;--text:#171717;--muted:#737373;
+--ink:#171717;--ink-fg:#fff;--hdr:rgba(255,255,255,.9);--in:#10b981;--brk:#f59e0b;
+--ok-bg:#ecfdf5;--ok-fg:#047857;--ok-bd:#a7f3d0;
+--warn-bg:#fffbeb;--warn-fg:#b45309;--warn-bd:#fde68a;
+--bad-bg:#fef2f2;--bad-fg:#dc2626;--bad-bd:#fecaca;
+--dim-bg:#f5f5f5;--dim-fg:#525252;--dim-bd:#e5e5e5;
+--safe-top:env(safe-area-inset-top,0px)}
+@media (prefers-color-scheme:dark){:root{--bg:#0a0a0a;--surface:#171717;--card:#141414;--border:#262626;--text:#f5f5f5;--muted:#a3a3a3;
+--ink:#f5f5f5;--ink-fg:#0a0a0a;--hdr:rgba(0,0,0,.8);
+--ok-bg:#022c22;--ok-fg:#6ee7b7;--ok-bd:#065f46;
+--warn-bg:#2a1d03;--warn-fg:#fcd34d;--warn-bd:#78350f;
+--bad-bg:#2a0a0a;--bad-fg:#fca5a5;--bad-bd:#7f1d1d;
+--dim-bg:#1f1f1f;--dim-fg:#a3a3a3;--dim-bd:#303030}}
+*{box-sizing:border-box}
+html{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Hiragino Kaku Gothic ProN",Meiryo,sans-serif;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;line-height:1.5}
+body{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.tab-num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.wrap{padding-top:var(--safe-top);min-height:100vh}
+.hdr{position:sticky;top:var(--safe-top);z-index:20;backdrop-filter:blur(20px);background:var(--hdr);border-bottom:1px solid var(--border)}
+.hdr-in{max-width:720px;margin:0 auto;padding:0 16px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{height:32px;width:32px;border-radius:50%;background:var(--ink);color:var(--ink-fg);display:grid;place-items:center;font-size:13px;font-weight:600;flex:none}
+.ttl{font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw}
+.clock{text-align:right;flex:none}
+.cdate{font-size:11px;color:var(--muted)}
+.ctime{font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;line-height:1;margin-top:2px}
+.main{max-width:720px;margin:0 auto;padding:20px 16px 96px;display:flex;flex-direction:column;gap:20px}
+.card{border:1px solid var(--border);background:var(--card);border-radius:24px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.pad{padding:20px}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.gap8{display:flex;gap:8px;align-items:center}
+h2{font-size:15px;font-weight:600;margin:0}
+.chip{display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:500;border:1px solid var(--dim-bd);background:var(--dim-bg);color:var(--dim-fg);white-space:nowrap}
+.chip.lg{padding:4px 12px;font-size:12px}
+.chip.ok{background:var(--ok-bg);color:var(--ok-fg);border-color:var(--ok-bd)}
+.chip.warn{background:var(--warn-bg);color:var(--warn-fg);border-color:var(--warn-bd)}
+.chip.bad{background:var(--bad-bg);color:var(--bad-fg);border-color:var(--bad-bd)}
+.chip.ink{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.badge{display:inline-block;margin-left:6px;padding:0 7px;border-radius:999px;font-size:10px;font-weight:600;background:var(--ink);color:var(--ink-fg);vertical-align:1px}
+.badge.m{background:var(--dim-bg);color:var(--dim-fg);border:1px solid var(--dim-bd)}
+.btn{height:52px;border:0;border-radius:999px;font-weight:600;font-size:16px;width:100%;transition:filter .15s}
+.btn:active{filter:brightness(.92)}
+.btn.in{background:var(--in);color:#fff}
+.btn.brk{background:var(--brk);color:#000}
+.btn.ink{background:var(--ink);color:var(--ink-fg)}
+.btn.sm{height:36px;font-size:13px;padding:0 16px;width:auto}
+.btn.line{background:transparent;border:1px solid var(--border);color:var(--text);height:44px;font-size:13px;font-weight:500;padding:0 24px;width:auto}
+.btn.line.sm{height:32px;padding:0 12px;font-size:12px}
+.btn.line.danger{border-color:var(--bad-bd);color:var(--bad-fg)}
+.btn.danger{background:#dc2626;color:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid2.t8{gap:8px}
+.grid4{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+@media(min-width:640px){.grid4{grid-template-columns:repeat(4,1fr)}}
+.box{border-radius:16px;background:var(--surface);border:1px solid var(--border);padding:16px}
+.box.sm{border-radius:14px;padding:12px}
+.lbl{font-size:11px;letter-spacing:.1em;color:var(--muted);font-weight:500}
+.big{margin-top:4px;font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1}
+.bar{margin-top:8px;height:4px;border-radius:99px;background:var(--border);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;transition:width .3s}
+.stat{font-size:18px;font-weight:600;margin-top:4px}
+.kv{border:1px solid var(--border);border-radius:14px;padding:12px;display:flex;justify-content:space-between;align-items:center}
+.kv b{display:block;font-size:16px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px}
+.kv b small{font-size:11px;color:var(--muted);font-weight:400}
+textarea,input[type=time],input[type=date],select{width:100%;border:1px solid var(--border);border-radius:12px;background:var(--card);padding:10px 12px;font-size:14px;outline:none}
+textarea{min-height:72px;resize:none;font-size:13px}
+textarea:focus,input:focus,select:focus{border-color:var(--ink)}
+input[type=time]{height:44px;font-size:15px;font-variant-numeric:tabular-nums}
+select,input[type=date]{height:40px;padding:0 10px}
+.brkrow{display:flex;justify-content:space-between;align-items:center;font-size:13px;border-radius:999px;background:var(--surface);border:1px solid var(--border);padding:8px 12px}
+.sep{border-top:1px solid var(--border);margin-top:20px;padding-top:16px}
+.mnav{display:flex;align-items:center;justify-content:space-between;border-radius:999px;background:var(--surface);border:1px solid var(--border);padding:4px}
+.mnav button{height:36px;width:36px;border-radius:50%;border:1px solid var(--border);background:var(--card)}
+.mnav span{font-size:14px;font-weight:600}
+.list{margin-top:20px;border:1px solid var(--border);border-radius:14px;overflow:auto;max-height:440px}
+.drow{width:100%;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--border);padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.drow:last-child{border-bottom:0}
+.drow:hover{background:var(--surface)}
+.drow.today{background:var(--ok-bg)}
+.drow.dim{opacity:.7}
+.dn{height:28px;width:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--card);flex:none}
+.drow.today .dn{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.dw{font-size:11px;color:var(--muted);width:14px;flex:none}
+.dm{flex:1;min-width:0}
+.dm .t{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;margin-right:6px}
+.dm .s{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dr{font-size:13px;font-weight:500;font-variant-numeric:tabular-nums;text-align:right;flex:none}
+.hint{margin-top:12px;font-size:11px;color:var(--muted);line-height:1.7}
+.note{font-size:12px;color:var(--muted);padding:0 4px}
+.role{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.role .btn{width:auto;height:40px;padding:0 20px;font-size:14px;flex:none}
+.seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--surface);border:1px solid var(--border)}
+.seg button{flex:1;height:36px;border-radius:999px;border:0;background:transparent;font-size:13px;font-weight:500;color:var(--muted)}
+.seg button.on{background:var(--ink);color:var(--ink-fg)}
+.seg.sm button{height:30px;font-size:12px}
+.sumrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.mrow{border:1px solid var(--border);border-radius:16px;padding:12px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;background:var(--card)}
+.mrow:hover{background:var(--surface)}
+.av{height:36px;width:36px;border-radius:50%;background:var(--dim-bg);border:1px solid var(--border);display:grid;place-items:center;font-weight:600;font-size:14px;flex:none}
+.mb{flex:1;min-width:0}
+.mb .nm{font-size:14px;font-weight:600;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.mb .ln{font-size:12px;color:var(--muted);margin-top:3px;font-variant-numeric:tabular-nums}
+.mb .nt{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcol{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+table.t{width:100%;border-collapse:collapse;font-size:13px;margin-top:16px}
+table.t th{font-size:11px;font-weight:500;color:var(--muted);text-align:right;padding:6px 6px;border-bottom:1px solid var(--border)}
+table.t th:first-child,table.t td:first-child{text-align:left}
+table.t td{padding:10px 6px;text-align:right;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+table.t tr.cl{cursor:pointer}
+table.t tr.cl:hover{background:var(--surface)}
+.dh{font-size:11px;font-weight:600;color:var(--muted);margin:16px 0 6px;letter-spacing:.04em}
+.lg{display:flex;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.lg .tm{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;width:62px;flex:none}
+.lg .tx{flex:1;min-width:0}
+.ovl{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:640px){.ovl{align-items:center}}
+.bd{position:absolute;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(4px)}
+.sheet{position:relative;width:100%;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;background:var(--card);border:1px solid var(--border);box-shadow:0 20px 50px rgba(0,0,0,.3)}
+@media(min-width:640px){.sheet{max-width:480px;border-radius:24px;max-height:86vh}}
+.sheet.s{max-width:360px;border-radius:20px;padding:20px}
+.sh-h{position:sticky;top:0;background:var(--hdr);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;justify-content:space-between;align-items:center}
+.sh-b{padding:20px;display:flex;flex-direction:column;gap:20px}
+.sh-f{position:sticky;bottom:0;background:var(--hdr);backdrop-filter:blur(20px);border-top:1px solid var(--border);padding:16px;display:flex;gap:8px}
+.sh-f .btn{height:48px;font-size:14px}
+.x{height:32px;width:32px;border-radius:50%;border:0;background:var(--dim-bg);display:grid;place-items:center;font-size:12px}
+.sts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.sts button{height:40px;border-radius:999px;border:1px solid var(--border);background:var(--card);font-size:12px;font-weight:500}
+.sts button.on{background:var(--ink);color:var(--ink-fg);border-color:var(--ink)}
+.add{margin-top:12px;height:36px;padding:0 16px;border-radius:999px;border:1px dashed var(--border);background:transparent;font-size:12px}
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:60;padding:10px 16px;border-radius:999px;background:var(--ink);color:var(--ink-fg);font-size:12px;font-weight:500;box-shadow:0 6px 18px rgba(0,0,0,.25);opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
+
+/* Multilingual layout: text may wrap without clipping. */
+.language-control{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap;font-size:13px}
+.language-control select{width:auto;max-width:100%;min-width:170px}
+.btn{height:auto;min-height:52px;padding:12px 16px;line-height:1.4;overflow-wrap:anywhere}
+.btn.sm,.btn.line.sm{height:auto;min-height:36px;padding:7px 12px;white-space:normal}
+.btn.line{height:auto;min-height:44px;padding:10px 16px}
+.btn.line.danger{background:transparent;color:var(--bad-fg)}
+.role{flex-wrap:wrap}.role .btn{height:auto;min-height:40px;max-width:100%}
+.seg button{height:auto;min-height:36px;line-height:1.35;padding:8px;overflow-wrap:anywhere}
+.add{height:auto;min-height:36px;padding:8px 16px;line-height:1.4;max-width:100%;overflow-wrap:anywhere}
+.sts{grid-template-columns:repeat(2,minmax(0,1fr))}.sts button{height:auto;min-height:40px;padding:8px;overflow-wrap:anywhere}
+.row{flex-wrap:wrap}.gap8{flex-wrap:wrap}.sh-b .gap8{flex-wrap:nowrap}
+.lbl{letter-spacing:0;overflow-wrap:anywhere}.stat{font-size:16px}.dn{width:auto;min-width:28px;padding:0 5px}
+.dw{width:auto;min-width:14px;max-width:52px;overflow-wrap:anywhere}
+.chip{white-space:normal;overflow-wrap:anywhere}.big{direction:ltr;unicode-bidi:isolate}
+.tab-num,input[type=time],input[type=date],.ctime{direction:ltr;unicode-bidi:isolate}
+.dm .t,.lg .tm{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.mrow{min-width:0}.mb,.dm{overflow-wrap:anywhere}.nm,.nt,textarea{unicode-bidi:plaintext}
+.hdr-in{height:auto;min-height:64px;padding-top:10px;padding-bottom:10px;align-items:flex-start}
+.brand{flex:1}.ttl{overflow-wrap:anywhere}.clock{max-width:43%}.cdate{overflow-wrap:anywhere}
+.sheet.s{max-height:92vh}#toast{border-radius:18px;max-height:40vh;overflow:auto}
+[dir=rtl] .clock{text-align:left}[dir=rtl] .drow{text-align:right}
+[dir=rtl] .dr{text-align:left}[dir=rtl] table.t th:first-child,[dir=rtl] table.t td:first-child{text-align:right}
+[dir=rtl] .badge{margin-left:0;margin-right:6px}[dir=rtl] .dm .t{margin-right:0;margin-left:6px}
+@media(max-width:420px){.main{padding-left:12px;padding-right:12px}.pad,.sh-b{padding:16px}.role .btn{width:100%}.mrow{flex-wrap:wrap}.mrow .mb{flex-basis:calc(100% - 48px)}.mrow>.btn{margin-inline-start:48px}.sh-f .btn,.sheet.s .btn{height:auto!important;min-height:48px}.kv{padding:10px;flex-wrap:wrap}.seg.sm{border-radius:18px;flex-wrap:wrap}.seg.sm button{flex:1 1 130px}}
+
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+<div id="toast"></div>
+<script>
+(() => {
+'use strict';
+
+/* ================= 定数・ユーティリティ ================= */
+const I18N = window.KintaiI18n;
+const t = I18N.t;
+const DOW = new Proxy([], {get: (_, key) => /^\d$/.test(String(key)) ? I18N.weekday(new Date(2026, 9, 11 + Number(key))) : undefined});
+const STATUS = new Proxy({}, {get: (_, key) => t(({work:'work',holiday:'holiday',absent:'absent',paid:'paid','':'unset'})[key] || 'unset')});
+const STATUS_KEYS = ['work','holiday','absent','paid'];
+const ACT_LABEL = new Proxy({}, {get: (_, key) => ({in:1,out:1,bstart:1,bend:1,undo:1,edit:1})[key] ? t(key === 'edit' ? 'editLog' : key) : ''});
+const LOGGED = { in:1, out:1, bstart:1, bend:1, undo:1, edit:1 };
+const pad = n => String(n).padStart(2,'0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+const hms = d => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+const dateJa = d => I18N.dateText(d);
+const parseYmd = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const firstOfMonth = d => new Date(d.getFullYear(), d.getMonth(), 1);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const T = (key, args) => esc(t(key, args));
+const STATUS_LABELS = {'未出勤':'notIn','退勤済':'done','休憩中':'onBreak','勤務中':'working','記録なし':'noRecord','退勤未登録':'open'};
+const statusLabel = value => t(STATUS_LABELS[value] || value);
+function renderLanguage() {
+ return `<div class="language-control"><label for="language-select">${T('language')}</label>
+  <select id="language-select" data-f="language" aria-label="${T('language')}" dir="ltr">
+  ${I18N.languages.map(([code,name]) => `<option value="${code}" lang="${code === 'jp' ? 'ja' : code}" ${code === I18N.language ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></div>`;
+}
+const toMin = s => {
+  if (!s) return null;
+  const m = String(s).match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = +m[1], n = +m[2];
+  return (h < 0 || h > 23 || n < 0 || n > 59) ? null : h * 60 + n;
+};
+const fmtMin = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+
+function breakMinutes(brs, nowMin) {
+  let t = 0;
+  for (const b of brs || []) {
+    const s = toMin(b.start), e = toMin(b.end);
+    if (s != null && e != null && e >= s) t += e - s;
+    else if (s != null && !b.end && nowMin != null && nowMin >= s) t += nowMin - s;
+  }
+  return t;
+}
+function workMinutes(r, nowMin) {
+  if (!r || !r.clockIn) return 0;
+  const s = toMin(r.clockIn);
+  let e = toMin(r.clockOut);
+  if (e == null && nowMin != null) e = nowMin;
+  if (s == null || e == null) return 0;
+  const l = e - s;
+  if (l <= 0) return 0;
+  return Math.max(0, l - breakMinutes(r.breaks, nowMin));
+}
+function statusOf(r) {
+  if (!r || !r.clockIn) return '未出勤';
+  if (r.clockOut) return '退勤済';
+  if ((r.breaks || []).some(b => b.start && !b.end)) return '休憩中';
+  return '勤務中';
+}
+const blankRec = () => ({ clockIn:'', clockOut:'', breaks:[], note:'', status:'' });
+const cloneRec = r => r ? JSON.parse(JSON.stringify(r)) : null;
+
+/* 他メンバーから届くデータは信用せず、形を整えてから使う */
+function normTime(x) { return (typeof x === 'string' && /^\d{1,2}:\d{2}$/.test(x)) ? x : ''; }
+function normRec(r) {
+  if (!r || typeof r !== 'object') return null;
+  return {
+    clockIn: normTime(r.clockIn),
+    clockOut: normTime(r.clockOut),
+    breaks: (Array.isArray(r.breaks) ? r.breaks : []).slice(0, 50).map(b => ({ start: normTime(b && b.start), end: normTime(b && b.end) })),
+    note: typeof r.note === 'string' ? r.note.slice(0, 2000) : '',
+    status: STATUS_KEYS.includes(r.status) ? r.status : ''
+  };
+}
+function normEvent(p) {
+  if (!p || typeof p !== 'object' || p.v !== 2) return null;
+  const str = (x, n) => typeof x === 'string' && x.length > 0 && x.length <= n;
+  if (!str(p.id, 80) || !str(p.by, 200) || typeof p.ts !== 'number' || !isFinite(p.ts)) return null;
+  const e = { v:2, k:p.k, id:p.id, ts:p.ts, by:p.by };
+  if (p.k === 'hello') {
+    if (!str(p.a, 200)) return null;
+    e.a = p.a; e.n = typeof p.n === 'string' ? p.n.slice(0, 60) : '';
+  } else if (p.k === 'clear') {
+    if (!str(p.a, 200)) return null;
+    e.a = p.a;
+  } else if (p.k === 'rep') {
+    if (!['claim','release','transfer'].includes(p.op)) return null;
+    e.op = p.op;
+    if (p.op === 'transfer') { if (!str(p.to, 200)) return null; e.to = p.to; }
+  } else if (p.k === 'rec') {
+    if (!str(p.a, 200) || typeof p.d !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(p.d)) return null;
+    e.a = p.a; e.d = p.d; e.act = typeof p.act === 'string' ? p.act.slice(0, 12) : '';
+    e.r = p.r == null ? null : normRec(p.r);
+    if (p.r != null && !e.r) return null;
+  } else return null;
+  return e;
+}
+
+/* ================= webxdc 接続（ブラウザ単体では擬似実装） ================= */
+function installMock() {
+  const KEY = 'webxdc-kintai-mock-updates';
+  const load = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
+  const addr = new URLSearchParams(location.search).get('user') || 'self@example.com';
+  let listener = null, seen = 0;
+  const pump = () => {
+    if (!listener) return;
+    const arr = load();
+    while (seen < arr.length) { const u = arr[seen++]; listener({ payload:u.payload, serial:u.serial, max_serial:arr.length }); }
+  };
+  window.webxdc = {
+    selfAddr: addr, selfName: addr.split('@')[0],
+    sendUpdate(u) {
+      const arr = load(); arr.push({ payload:u.payload, serial:arr.length + 1 });
+      try { localStorage.setItem(KEY, JSON.stringify(arr)); } catch (e) {}
+      pump();
+    },
+    setUpdateListener(cb, serial) { listener = cb; seen = serial || 0; pump(); return Promise.resolve(); }
+  };
+  window.addEventListener('storage', e => { if (e.key === KEY) pump(); });
+}
+if (!window.webxdc) installMock();
+const wx = window.webxdc;
+const SELF = wx.selfAddr || 'self@example.com';
+const SELF_NAME = (wx.selfName || SELF.split('@')[0] || '').slice(0, 60);
+
+/* ================= 状態 ================= */
+const S = {
+  now: new Date(),
+  events: new Map(),
+  dirty: true, view: null,
+  ready: false,
+  noteDraft: null, noteTimer: null,
+  deferred: false, lastMinute: -1,
+  ui: {
+    tab: 'me', atab: 'day',
+    month: firstOfMonth(new Date()),     // 自分の月次
+    amonth: firstOfMonth(new Date()),    // 管理: 月次
+    adate: ymd(new Date()),              // 管理: 状況の日付
+    member: null,                        // 管理: メンバー詳細
+    logFilter: 'all',
+    edit: null, confirmClear: false
+  }
+};
+let lastTs = 0;
+const nextTs = () => (lastTs = Math.max(Date.now(), lastTs + 1));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+/* ================= イベント → 状態の導出（順序に依存せず同じ結果になる） ================= */
+const cmpEv = (a, b) => (a.ts - b.ts) || (a.by < b.by ? -1 : a.by > b.by ? 1 : 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+function derive() {
+  const evs = [...S.events.values()].sort(cmpEv);
+
+  // 代表の履歴: 先着で claim、代表本人だけが release / transfer できる
+  let rep = null;
+  const tl = [];
+  for (const e of evs) {
+    if (e.k !== 'rep') continue;
+    if (e.op === 'claim') { if (rep !== null) continue; rep = e.by; }
+    else if (e.op === 'release') { if (rep === null || rep !== e.by) continue; rep = null; }
+    else if (e.op === 'transfer') { if (rep === null || rep !== e.by) continue; rep = e.to; }
+    tl.push([e.ts, rep]);
+  }
+  const repAt = ts => { let r = null; for (const [t, v] of tl) { if (t <= ts) r = v; else break; } return r; };
+
+  const members = {}, days = {};
+  let log = [];
+  const ensure = a => members[a] || (members[a] = { addr:a, name:'', nts:0 });
+
+  for (const e of evs) {
+    if (e.k === 'hello') {
+      const m = ensure(e.a);
+      if (e.by === e.a && e.n && e.ts >= m.nts) { m.name = e.n; m.nts = e.ts; }
+    } else if (e.k === 'clear') {
+      if (e.by !== e.a) continue;                       // 全削除は本人のみ
+      ensure(e.a); days[e.a] = {};
+      log = log.filter(x => x.a !== e.a);
+    } else if (e.k === 'rec') {
+      if (!(e.by === e.a || repAt(e.ts) === e.by)) continue;   // 本人 or その時点の代表のみ
+      ensure(e.a);
+      const d = days[e.a] || (days[e.a] = {});
+      const prev = d[e.d];
+      const btn = LOGGED[e.act] ? { ts:e.ts, act:e.act, by:e.by } : (prev && prev.btn);
+      if (e.r) d[e.d] = { r:e.r, ts:e.ts, by:e.by, btn };
+      else delete d[e.d];
+      if (LOGGED[e.act]) log.push(e);
+    }
+  }
+  return { rep, members, days, log };
+}
+const V = () => { if (S.dirty) { S.view = derive(); S.dirty = false; } return S.view; };
+
+function addEvent(raw) {
+  const e = normEvent(raw);
+  if (!e || S.events.has(e.id)) return false;
+  S.events.set(e.id, e);
+  if (e.by === SELF) lastTs = Math.max(lastTs, e.ts);
+  S.dirty = true;
+  return true;
+}
+function send(ev) {
+  ev.v = 2; ev.id = uid(); ev.ts = nextTs(); ev.by = SELF;
+  addEvent(ev);                                          // 楽観的に反映（id で重複排除）
+  try { (wx.sendUpdate || wx.setUpdate).call(wx, { payload: ev }, ''); } catch (e) { console.error(e); }
+  renderNow();
+}
+function sendRec(a, d, rec, act) {
+  const ev = { k:'rec', a, d, r: rec ? cloneRec(rec) : null, act };
+  if (a === SELF) ev.n = SELF_NAME;
+  send(ev);
+}
+
+/* ================= 参照ヘルパ ================= */
+const recOf = (v, a, d) => { const x = v.days[a] && v.days[a][d]; return x ? x.r : null; };
+const nameOf = (v, a) => (v.members[a] && v.members[a].name) || a.split('@')[0];
+function memberList(v) {
+  const list = Object.values(v.members).slice();
+  if (!v.members[SELF]) list.push({ addr:SELF, name:SELF_NAME });
+  return list.sort((x, y) => nameOf(v, x.addr).localeCompare(nameOf(v, y.addr), I18N.locale()));
+}
+function monthDays(m) {
+  const n = new Date(m.getFullYear(), m.getMonth() + 1, 0).getDate(), out = [];
+  for (let i = 1; i <= n; i++) out.push(new Date(m.getFullYear(), m.getMonth(), i));
+  return out;
+}
+function monthStats(v, a, m) {
+  let workDays = 0, totalWork = 0, totalBreak = 0;
+  for (const dt of monthDays(m)) {
+    const r = recOf(v, a, ymd(dt));
+    if (r && r.clockIn) { workDays++; totalWork += workMinutes(r); totalBreak += breakMinutes(r.breaks); }
+  }
+  return { workDays, totalWork, totalBreak, avg: workDays ? Math.round(totalWork / workDays) : 0 };
+}
+function category(rec, isToday) {
+  if (!rec || (!rec.clockIn && !rec.status)) return { key:'none', label: isToday ? t('notIn') : t('noRecord'), cls:'' };
+  if (!rec.clockIn) return { key:'leave', label: STATUS[rec.status], cls: rec.status === 'absent' ? 'bad' : (rec.status === 'paid' ? 'ok' : '') };
+  if (rec.clockOut) return { key:'done', label:t('done'), cls:'ink' };
+  if ((rec.breaks || []).some(b => b.start && !b.end)) return { key:'break', label:t('onBreak'), cls:'warn' };
+  return isToday ? { key:'work', label:t('working'), cls:'ok' } : { key:'open', label:t('open'), cls:'bad' };
+}
+const nowMinutes = () => S.now.getHours() * 60 + S.now.getMinutes();
+const canEdit = (v, a) => a === SELF || v.rep === SELF;
+
+/* ================= 描画 ================= */
+function renderHeader(v) {
+  const role = !S.ready ? '' : v.rep === SELF ? `<span class="badge">${T('rep')}</span>` : `<span class="badge m">${T('member')}</span>`;
+  return `<header class="hdr"><div class="hdr-in">
+    <div class="brand"><div class="logo">${T('logo')}</div><div style="min-width:0"><div class="ttl">${T('title')}</div><div class="sub">${esc(SELF_NAME)}${role}</div></div></div>
+    <div class="clock"><div class="cdate">${dateJa(S.now)}</div><div class="ctime" id="clk">${hms(S.now)}</div></div>
+  </div></header>`;
+}
+function renderRole(v) {
+  if (!S.ready) return `<div class="note">${T('sync')}</div>`;
+  if (v.rep === null) return `<section class="card pad role"><div><b style="font-size:14px">${T('repUnset')}</b>
+    <div class="muted" style="font-size:12px;margin-top:2px">${T('repHint')}</div></div>
+    <button class="btn ink" data-act="rep-claim">${T('claim')}</button></section>`;
+  if (v.rep !== SELF) return `<div class="note">${T('rep')}: <bdi>${esc(nameOf(v, v.rep))}</bdi> · ${T('shared')}</div>`;
+  return '';
+}
+function renderTabs() {
+  const t = S.ui.tab;
+  return `<div class="seg"><button class="${t === 'me' ? 'on' : ''}" data-act="tab" data-v="me">${T('me')}</button>
+    <button class="${t === 'admin' ? 'on' : ''}" data-act="tab" data-v="admin">${T('admin')}</button></div>`;
+}
+
+/* --- 自分の打刻 --- */
+function renderToday(v) {
+  const k = ymd(S.now), R = recOf(v, SELF, k), st = statusOf(R), nm = nowMinutes();
+  const live = st !== '退勤済' ? nm : undefined;
+  const br = R ? breakMinutes(R.breaks, live) : 0, wk = R ? workMinutes(R, live) : 0;
+  const stCls = st === '勤務中' ? 'ok' : st === '休憩中' ? 'warn' : st === '退勤済' ? 'ink' : '';
+  let btns = '';
+  if (st === '未出勤') btns = `<button class="btn in" data-act="in">${T('in')}</button>`;
+  else if (st === '勤務中') btns = `<div class="grid2 t8"><button class="btn brk" data-act="bstart">${T('bstart')}</button><button class="btn ink" data-act="out">${T('out')}</button></div>`;
+  else if (st === '休憩中') btns = `<button class="btn brk" data-act="bend">${T('bend')}</button>`;
+  else btns = `<div style="text-align:center"><div class="muted" style="font-size:13px;margin-bottom:12px">${T('completed')}</div><button class="btn line" data-act="undo">${T('undoBtn')}</button></div>`;
+  const brs = R && R.breaks.length ? `<div class="sep"><div class="row"><span style="font-size:12px;font-weight:500;color:var(--muted)">${T('breakRecords')}</span><span class="muted" style="font-size:11px">${T('total', {n:br})}</span></div>
+    <div class="mcol" style="margin-top:8px;gap:6px">${R.breaks.map(b => `<div class="brkrow"><span class="tab-num">${esc(b.start || '--:--')} - ${esc(b.end || '…')}</span><span class="muted" style="font-size:11px">${b.start && b.end ? T('minutes', {n:toMin(b.end) - toMin(b.start)}) : T('tracking')}</span></div>`).join('')}</div></div>` : '';
+  const note = S.noteDraft != null ? S.noteDraft : (R ? R.note : '');
+  return `<section class="card"><div class="pad">
+    <div class="row" style="align-items:flex-start"><div>
+      <div class="gap8"><span class="chip">${T('today')}</span><span class="muted" style="font-size:13px">${dateJa(S.now)}</span></div>
+      <div class="gap8" style="margin-top:12px"><span class="chip lg ${stCls}">${esc(statusLabel(st))}</span>${R && R.status ? `<span class="chip">${STATUS[R.status]}</span>` : ''}</div></div>
+      <button class="btn line sm" data-act="edit" data-a="${esc(SELF)}" data-d="${k}">${T('edit')}</button></div>
+    <div class="grid2" style="margin-top:24px">
+      <div class="box"><div class="lbl">${T('in')}</div><div class="big">${esc((R && R.clockIn) || '--:--')}</div><div class="bar"><i style="width:${R && R.clockIn ? 100 : 0}%;background:var(--in)"></i></div></div>
+      <div class="box"><div class="lbl">${T('out')}</div><div class="big">${esc((R && R.clockOut) || '--:--')}</div><div class="bar"><i style="width:${R && R.clockOut ? 100 : 0}%;background:var(--ink)"></i></div></div></div>
+    <div class="grid2 t8" style="margin-top:16px">
+      <div class="kv"><div><span class="muted" style="font-size:11px">${T('breakTime')}</span><b>${fmtMin(br)} <small>(${T('minutes', {n:br})})</small></b></div><span>☕</span></div>
+      <div class="kv"><div><span class="muted" style="font-size:11px">${T('workTime')}</span><b>${fmtMin(wk)} <small>(${T('minutes', {n:wk})})</small></b></div><span>⏱</span></div></div>
+    <div style="margin-top:20px">${btns}</div>${brs}
+    <div style="margin-top:20px"><div style="font-size:12px;font-weight:500;color:var(--muted);margin-bottom:8px">${T('noteToday')}</div>
+      <textarea dir="auto" data-f="note" data-fk="note" placeholder="${T('notePlaceholder')}">${esc(note)}</textarea></div>
+  </div></section>`;
+}
+function dayRow(v, a, dt) {
+  const k = ymd(dt), r = recOf(v, a, k), isT = k === ymd(S.now), wknd = dt.getDay() === 0 || dt.getDay() === 6;
+  const b = r ? breakMinutes(r.breaks) : 0, w = r ? workMinutes(r) : 0;
+  const chip = r && r.status ? `<span class="chip">${STATUS[r.status]}</span>` : (r && r.clockIn ? `<span class="chip ink">${T('work')}</span>` : '');
+  return `<button class="drow ${isT ? 'today' : ''} ${wknd && !(r && r.clockIn) ? 'dim' : ''}" data-act="edit" data-a="${esc(a)}" data-d="${k}">
+    <span class="dn">${dt.getDate()}</span><span class="dw">${DOW[dt.getDay()]}</span>
+    <span class="dm"><span class="t">${esc((r && r.clockIn) || '--:--')} - ${esc((r && r.clockOut) || '--:--')}</span>${chip}
+      <div class="s">${b ? T('breakLabel') + ' ' + T('minutes', {n:b}) : T('noBreak')}${r && r.note ? ' · ' + esc(r.note.slice(0, 24)) : ''}</div></span>
+    <span class="dr">${r ? fmtMin(w) : '--:--'}</span></button>`;
+}
+function statTiles(s) {
+  return `<div class="grid4" style="margin-top:16px">
+    <div class="box sm"><div class="muted" style="font-size:11px">${T('workDays')}</div><div class="stat">${T('days', {n:s.workDays})}</div></div>
+    <div class="box sm"><div class="muted" style="font-size:11px">${T('totalWork')}</div><div class="stat">${fmtMin(s.totalWork)}</div></div>
+    <div class="box sm"><div class="muted" style="font-size:11px">${T('totalBreak')}</div><div class="stat">${fmtMin(s.totalBreak)}</div></div>
+    <div class="box sm"><div class="muted" style="font-size:11px">${T('avg')}</div><div class="stat">${fmtMin(s.avg)}</div></div></div>`;
+}
+function monthNav(m, scope) {
+  return `<div class="mnav" style="margin-top:16px"><button data-act="mprev" data-s="${scope}">‹</button><span class="tab-num">${esc(I18N.dateText(m, true))}</span><button data-act="mnext" data-s="${scope}">›</button></div>`;
+}
+function renderMyMonth(v) {
+  const m = S.ui.month;
+  return `<section class="card"><div class="pad">
+    <div class="row"><h2>${T('monthRecords')}</h2><div class="gap8"><button class="btn line sm" data-act="csv-me">${T('csv')}</button><button class="btn line sm danger" data-act="clear-ask">${T('clear')}</button></div></div>
+    ${monthNav(m, 'me')}${statTiles(monthStats(v, SELF, m))}
+    <div class="list">${monthDays(m).map(dt => dayRow(v, SELF, dt)).join('')}</div>
+    <div class="hint">${T('monthHint1')}<br>${T('monthHint2')}</div>
+  </div></section>`;
+}
+
+/* --- 管理（代表のみ） --- */
+function renderAdmin(v) {
+  const t = S.ui.atab;
+  const seg = `<div class="seg sm"><button class="${t === 'day' ? 'on' : ''}" data-act="atab" data-v="day">${T('day')}</button>
+    <button class="${t === 'month' ? 'on' : ''}" data-act="atab" data-v="month">${T('monthStats')}</button>
+    <button class="${t === 'log' ? 'on' : ''}" data-act="atab" data-v="log">${T('log')}</button></div>`;
+  let body;
+  if (t === 'month') body = S.ui.member ? renderMemberDetail(v) : renderAdminMonth(v);
+  else if (t === 'log') body = renderAdminLog(v);
+  else body = renderAdminDay(v);
+  return seg + body;
+}
+function renderAdminDay(v) {
+  const d = S.ui.adate, isT = d === ymd(S.now), nm = nowMinutes(), list = memberList(v);
+  const cnt = { work:0, break:0, done:0, none:0, leave:0, open:0 };
+  const rows = list.map(m => {
+    const a = m.addr, r = recOf(v, a, d), c = category(r, isT);
+    cnt[c.key]++;
+    const live = isT && r && !r.clockOut ? nm : undefined;
+    const b = r ? breakMinutes(r.breaks, live) : 0, w = r ? workMinutes(r, live) : 0;
+    const dd = v.days[a] && v.days[a][d], btn = dd && dd.btn;
+    const last = btn ? t('lastAction', {action:ACT_LABEL[btn.act], time:hm(new Date(btn.ts))}) + (btn.by !== a ? ' (' + t('rep') + ')' : '') : '';
+    return `<div class="mrow" data-act="edit" data-a="${esc(a)}" data-d="${d}">
+      <div class="av">${esc(nameOf(v, a).slice(0, 1).toUpperCase())}</div>
+      <div class="mb"><div class="nm">${esc(nameOf(v, a))}${a === v.rep ? `<span class="badge" style="margin:0">${T('rep')}</span>` : ''}<span class="chip ${c.cls}">${c.label}</span>${r && r.status && r.clockIn ? `<span class="chip">${STATUS[r.status]}</span>` : ''}</div>
+        <div class="ln"><bdi dir="ltr">${esc((r && r.clockIn) || '--:--')} – ${esc((r && r.clockOut) || '--:--')}</bdi> · ${T('breakLabel')} ${T('minutes', {n:b})} · ${T('workLabel')} ${fmtMin(w)}</div>
+        ${last ? `<div class="ln">${esc(last)}</div>` : ''}${r && r.note ? `<div class="nt">📝 ${esc(r.note)}</div>` : ''}</div>
+      <button class="btn line sm" data-act="member" data-a="${esc(a)}">${T('monthly')}</button></div>`;
+  }).join('');
+  const chips = [
+    isT ? [t('working'), cnt.work, 'ok'] : [t('open'), cnt.open, cnt.open ? 'bad' : ''],
+    [t('onBreak'), cnt.break, 'warn'], [t('done'), cnt.done, 'ink'], [isT ? t('notIn') : t('noRecord'), cnt.none, ''], [t('leave'), cnt.leave, '']
+  ].map(([l, n, c]) => `<span class="chip lg ${c}">${l} ${n}</span>`).join('');
+  const others = list.filter(m => m.addr !== SELF);
+  return `<section class="card"><div class="pad">
+    <div class="row"><h2>${T('memberCount', {n:list.length})}</h2><button class="btn line sm" data-act="csv-all-day">${T('csv')}</button></div>
+    <div class="mnav" style="margin-top:16px"><button data-act="dprev">‹</button>
+      <span class="tab-num">${dateJa(parseYmd(d))}</span><button data-act="dnext">›</button></div>
+    <div class="gap8" style="margin-top:10px"><input type="date" data-f="adate" value="${d}" style="flex:1"><button class="btn line sm" data-act="dtoday">${T('today')}</button></div>
+    <div class="sumrow">${chips}</div>
+    <div class="mcol">${rows || `<div class="muted" style="font-size:13px">${T('noMembers')}</div>`}</div>
+    <div class="hint">${T('adminHint1')}<br>${T('adminHint2')}</div>
+  </div></section>
+  <section class="card"><div class="pad"><h2>${T('repSettings')}</h2>
+    <div class="hint" style="margin-top:6px">${T('repHintChange')}</div>
+    <div class="gap8" style="margin-top:12px"><select id="xfer" style="flex:1" ${others.length ? '' : 'disabled'}>
+      ${others.length ? others.map(m => `<option value="${esc(m.addr)}">${esc(nameOf(v, m.addr))}</option>`).join('') : `<option>${T('noOthers')}</option>`}</select>
+      <button class="btn line sm" data-act="rep-transfer" ${others.length ? '' : 'disabled'}>${T('transfer')}</button></div>
+    <div style="margin-top:10px"><button class="btn line sm danger" data-act="rep-release">${T('release')}</button></div></div></section>`;
+}
+function renderAdminMonth(v) {
+  const m = S.ui.amonth, list = memberList(v);
+  const rows = list.map(x => {
+    const s = monthStats(v, x.addr, m);
+    return `<tr class="cl" data-act="member" data-a="${esc(x.addr)}"><td>${esc(nameOf(v, x.addr))}</td><td>${T('days', {n:s.workDays})}</td><td>${fmtMin(s.totalWork)}</td><td>${fmtMin(s.totalBreak)}</td><td>${fmtMin(s.avg)}</td></tr>`;
+  }).join('');
+  return `<section class="card"><div class="pad">
+    <div class="row"><h2>${T('monthStats')}</h2><button class="btn line sm" data-act="csv-all">${T('csvAll')}</button></div>
+    ${monthNav(m, 'admin')}
+    <div style="overflow:auto"><table class="t"><thead><tr><th>${T('member')}</th><th>${T('workDays')}</th><th>${T('totalWork')}</th><th>${T('totalBreak')}</th><th>${T('avg')}</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="hint">${T('monthAdminHint')}</div>
+  </div></section>`;
+}
+function renderMemberDetail(v) {
+  const a = S.ui.member, m = S.ui.amonth;
+  return `<section class="card"><div class="pad">
+    <div class="row"><button class="btn line sm" data-act="member-back">${T('back')}</button><button class="btn line sm" data-act="csv-member">${T('csv')}</button></div>
+    <h2 style="margin-top:16px">${T('memberMonth', {name:nameOf(v,a)})}</h2>
+    ${monthNav(m, 'admin')}${statTiles(monthStats(v, a, m))}
+    <div class="list">${monthDays(m).map(dt => dayRow(v, a, dt)).join('')}</div>
+  </div></section>`;
+}
+function renderAdminLog(v) {
+  const f = S.ui.logFilter, list = memberList(v);
+  const items = v.log.filter(e => f === 'all' || e.a === f).slice().reverse().slice(0, 300);
+  let html = '', cur = '';
+  for (const e of items) {
+    const dt = new Date(e.ts), day = ymd(dt);
+    if (day !== cur) { cur = day; html += `<div class="dh">${dateJa(dt)}</div>`; }
+    const sub = [];
+    if (e.d !== day) sub.push(T('recordFor', {date:e.d}));
+    if (e.by !== e.a) sub.push(T('repEdited', {name:nameOf(v,e.by)}));
+    html += `<div class="lg"><span class="tm">${hms(dt)}</span><span class="tx"><b>${esc(nameOf(v, e.a))}</b> ${ACT_LABEL[e.act] || ''}
+      ${sub.length ? `<span class="muted" style="font-size:11px">　${sub.join(' · ')}</span>` : ''}</span></div>`;
+  }
+  return `<section class="card"><div class="pad">
+    <div class="row"><h2>${T('log')}</h2><select data-f="logFilter" style="width:auto;max-width:55%"><option value="all">${T('all')}</option>
+      ${list.map(m => `<option value="${esc(m.addr)}" ${f === m.addr ? 'selected' : ''}>${esc(nameOf(v, m.addr))}</option>`).join('')}</select></div>
+    <div style="margin-top:4px">${html || `<div class="muted" style="font-size:13px;margin-top:16px">${T('noPunch')}</div>`}</div>
+    <div class="hint">${T('logHint')}</div>
+  </div></section>`;
+}
+
+/* --- モーダル --- */
+function calcText(rec) { const w = workMinutes(rec), b = breakMinutes(rec.breaks); return [fmtMin(w) + ' (' + t('minutes', {n:w}) + ')', t('total', {n:b})]; }
+function renderEditModal(v) {
+  const E = S.ui.edit;
+  if (!E) return '';
+  const s = E.rec, who = E.a === SELF ? '' : esc(nameOf(v, E.a));
+  const [c, b] = calcText(s);
+  return `<div class="ovl"><div class="bd" data-act="modal-close"></div><div class="sheet" id="sheet">
+    <div class="sh-h"><div><div class="muted" style="font-size:12px">${T('editDate', {date:dateJa(parseYmd(E.d))})}</div><div style="font-size:16px;font-weight:600;margin-top:2px">${T('editTitle')}${who ? ' · ' + who : ''}</div></div>
+      <button class="x" data-act="modal-close">✕</button></div>
+    <div class="sh-b">
+      <div class="grid2"><div><label class="lbl" style="letter-spacing:0">${T('inTime')}</label><input type="time" data-f="e.clockIn" data-fk="e.clockIn" value="${esc(s.clockIn)}" style="margin-top:4px"></div>
+        <div><label class="lbl" style="letter-spacing:0">${T('outTime')}</label><input type="time" data-f="e.clockOut" data-fk="e.clockOut" value="${esc(s.clockOut)}" style="margin-top:4px"></div></div>
+      <div><div class="lbl" style="letter-spacing:0;margin-bottom:8px">${T('status')}</div>
+        <div class="sts">${STATUS_KEYS.map(k => `<button class="${s.status === k ? 'on' : ''}" data-act="e-status" data-v="${k}">${STATUS[k]}</button>`).join('')}</div>
+        <div style="margin-top:8px"><button class="btn line sm" style="${!s.status ? 'background:var(--dim-bg)' : ''}" data-act="e-status" data-v="">${T('unsetBtn')}</button></div></div>
+      <div><div class="row"><div class="lbl" style="letter-spacing:0">${T('breakMulti')}</div><div class="muted" style="font-size:11px" id="ebrk">${esc(b)}</div></div>
+        <div class="mcol" style="margin-top:8px">${s.breaks.length ? s.breaks.map((x, i) => `<div class="gap8">
+          <input type="time" data-f="e.b.${i}.start" data-fk="e.b.${i}.start" value="${esc(x.start)}" style="height:40px;font-size:13px">
+          <span class="muted">-</span><input type="time" data-f="e.b.${i}.end" data-fk="e.b.${i}.end" value="${esc(x.end)}" style="height:40px;font-size:13px">
+          <button class="x" data-act="e-b-del" data-i="${i}">✕</button></div>`).join('') : `<div class="muted" style="font-size:12px;padding:8px 0">${T('noBreakRecords')}</div>`}</div>
+        <button class="add" data-act="e-b-add">${T('addBreak')}</button></div>
+      <div><label class="lbl" style="letter-spacing:0">${T('note')}</label><textarea dir="auto" data-f="e.note" data-fk="e.note" placeholder="${T('noteEditPlaceholder')}" style="margin-top:4px;min-height:84px">${esc(s.note)}</textarea></div>
+      <div class="box sm row"><span class="muted" style="font-size:11px">${T('workCalc')}</span><b class="tab-num" id="ecalc">${esc(c)}</b></div>
+    </div>
+    <div class="sh-f"><button class="btn line" style="flex:1;height:48px" data-act="modal-close">${T('cancel')}</button><button class="btn ink" style="flex:1" data-act="e-save">${T('save')}</button></div>
+  </div></div>`;
+}
+function renderClearModal() {
+  if (!S.ui.confirmClear) return '';
+  return `<div class="ovl" style="align-items:center;padding:16px"><div class="bd" data-act="modal-close"></div><div class="sheet s">
+    <div style="font-size:18px">⚠</div><div style="margin-top:8px;font-size:16px;font-weight:600">${T('deleteTitle')}</div>
+    <div class="muted" style="margin-top:8px;font-size:13px">${T('clearHint')}</div>
+    <div class="gap8" style="margin-top:20px"><button class="btn line" style="flex:1;height:44px" data-act="modal-close">${T('cancel')}</button><button class="btn danger" style="flex:1;height:44px;font-size:13px" data-act="clear-do">${T('deleteBtn')}</button></div>
+  </div></div>`;
+}
+
+function renderMe(v) { return renderToday(v) + renderMyMonth(v); }
+function build() {
+  const v = V();
+  if (v.rep !== SELF && S.ui.tab === 'admin') S.ui.tab = 'me';
+  const isRep = v.rep === SELF;
+  const body = renderRole(v) + (isRep ? renderTabs() : '') + (isRep && S.ui.tab === 'admin' ? renderAdmin(v) : renderMe(v))
+    + `<div class="note" style="text-align:center">${T('footer')}</div>`;
+  return renderHeader(v) + `<main class="main">${renderLanguage()}${body}</main>` + renderEditModal(v) + renderClearModal();
+}
+
+/* ---- 再描画（入力中のフォーカス・スクロール位置を保つ） ---- */
+const $app = document.getElementById('app');
+let rafId = 0;
+function renderNow() { S.deferred = false; if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } doRender(); }
+function renderSoon() {                                  // 同期・時計など背景起因の再描画
+  if (S.ui.edit) { S.deferred = true; return; }          // 編集モーダル表示中は入力を邪魔しない
+  if (rafId) return;
+  rafId = requestAnimationFrame(() => { rafId = 0; doRender(); });
+}
+function doRender() {
+  const ae = document.activeElement;
+  let fk = null, ss = null, se = null;
+  if (ae && ae.dataset && ae.dataset.fk) { fk = ae.dataset.fk; try { ss = ae.selectionStart; se = ae.selectionEnd; } catch (e) {} }
+  const sy = window.scrollY, sheet = document.getElementById('sheet'), st = sheet ? sheet.scrollTop : 0;
+  $app.innerHTML = build();
+  window.scrollTo(0, sy);
+  const sh2 = document.getElementById('sheet'); if (sh2) sh2.scrollTop = st;
+  if (fk) {
+    const el = $app.querySelector(`[data-fk="${fk.replace(/"/g, '')}"]`);
+    if (el) { el.focus(); try { if (ss != null) el.setSelectionRange(ss, se); } catch (e) {} }
+  }
+}
+let toastTimer = 0;
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2500);
+}
+
+/* ================= 操作 ================= */
+function needReady() { if (!S.ready) { toast(t('syncWait')); return false; } return true; }
+function flushNote() {
+  if (S.noteTimer) { clearTimeout(S.noteTimer); S.noteTimer = null; }
+  if (S.noteDraft == null) return;
+  const k = ymd(new Date()), v = V(), R = recOf(v, SELF, k);
+  const text = S.noteDraft; S.noteDraft = null;
+  if ((R ? R.note : '') === text) return;
+  const rec = R ? cloneRec(R) : Object.assign(blankRec(), { status:'work' });
+  rec.note = text;
+  if (!text && !rec.clockIn && !rec.clockOut && !rec.breaks.length) { sendRec(SELF, k, null, 'note'); return; }
+  sendRec(SELF, k, rec, 'note');
+}
+function punch(kind) {
+  if (!needReady()) return;
+  flushNote();
+  const now = new Date(), k = ymd(now), t = hm(now), v = V(), R = recOf(v, SELF, k), st = statusOf(R);
+  let rec;
+  if (kind === 'in') {
+    if (R && R.clockIn) return;
+    rec = R ? cloneRec(R) : blankRec(); rec.clockIn = t; rec.status = rec.status || 'work';
+  } else if (kind === 'bstart') {
+    if (st !== '勤務中') return;
+    rec = cloneRec(R); rec.breaks.push({ start:t, end:'' });
+  } else if (kind === 'bend') {
+    if (st !== '休憩中') return;
+    rec = cloneRec(R); const i = rec.breaks.map(b => b.start && !b.end).lastIndexOf(true); rec.breaks[i].end = t;
+  } else if (kind === 'out') {
+    if (!R || !R.clockIn || R.clockOut) return;
+    rec = cloneRec(R); rec.breaks.forEach(b => { if (b.start && !b.end) b.end = t; }); rec.clockOut = t;
+  } else if (kind === 'undo') {
+    if (!R || !R.clockOut) return;
+    rec = cloneRec(R); rec.clockOut = '';
+  } else return;
+  sendRec(SELF, k, rec, kind);
+  toast(I18N.t(({in:'inSaved',out:'outSaved',bstart:'breakStarted',bend:'breakEnded',undo:'undoSaved'})[kind], {time:t}));
+}
+function openEdit(a, d) {
+  const v = V();
+  if (!canEdit(v, a)) { toast(t('noPermissionOther')); return; }
+  flushNote();
+  const r = recOf(v, a, d);
+  S.ui.edit = { a, d, rec: r ? cloneRec(r) : blankRec() };
+  renderNow();
+}
+function saveEdit() {
+  const E = S.ui.edit; if (!E) return;
+  if (!needReady()) return;
+  const v = V();
+  if (!canEdit(v, E.a)) { toast(t('noPermission')); return; }
+  const s = E.rec;
+  if (s.clockIn && toMin(s.clockIn) == null) return toast(t('inBad'));
+  if (s.clockOut && toMin(s.clockOut) == null) return toast(t('outBad'));
+  for (const b of s.breaks) {
+    if (b.start && toMin(b.start) == null) return toast(t('breakStartBad'));
+    if (b.end && toMin(b.end) == null) return toast(t('breakEndBad'));
+  }
+  const empty = !s.clockIn && !s.clockOut && !s.breaks.length && !s.note && !s.status;
+  S.ui.edit = null;
+  sendRec(E.a, E.d, empty ? null : s, 'edit');
+  toast(t('saved'));
+}
+function closeModal() { S.ui.edit = null; S.ui.confirmClear = false; renderNow(); }
+
+function csvCell(x) { return '"' + String(x).replace(/"/g, '""') + '"'; }
+const csvText = s => /^[=+\-@\t\r]/.test(s) ? "'" + s : s;       // 表計算ソフトでの数式実行を防ぐ
+function downloadCsv(rows, name) {
+  const body = '\uFEFF' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([body], { type:'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a'); a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast(t('csvSaved'));
+}
+const csvHead = () => ['date','weekday','status','in','out','csvBreak','csvWorkMin','csvWorkHour','note'].map(key => t(key));
+function csvRow(v, a, dt) {
+  const r = recOf(v, a, ymd(dt)), w = r ? workMinutes(r) : 0;
+  return [ymd(dt), DOW[dt.getDay()], r && r.status ? STATUS[r.status] : '', (r && r.clockIn) || '', (r && r.clockOut) || '',
+    String(r ? breakMinutes(r.breaks) : 0), String(w), (w / 60).toFixed(2), csvText((r && r.note) || '')];
+}
+function csvFor(addrs, m, withWho) {
+  const v = V(), rows = [withWho ? [t('member'),t('address'), ...csvHead()] : csvHead()];
+  for (const a of addrs) for (const dt of monthDays(m)) {
+    const row = csvRow(v, a, dt);
+    rows.push(withWho ? [csvText(nameOf(v, a)), csvText(a), ...row] : row);
+  }
+  return rows;
+}
+const mTag = m => `${m.getFullYear()}-${pad(m.getMonth() + 1)}`;
+const safeName = s => String(s).replace(/[^\w\-\u3040-\u30ff\u4e00-\u9fff]+/g, '_');
+
+function repOp(op, to) {
+  if (!needReady()) return;
+  const ev = { k:'rep', op }; if (to) ev.to = to;
+  send(ev);
+}
+function shiftMonth(scope, d) {
+  const key = scope === 'me' ? 'month' : 'amonth', m = S.ui[key];
+  S.ui[key] = new Date(m.getFullYear(), m.getMonth() + d, 1);
+}
+function shiftDay(d) { const x = parseYmd(S.ui.adate); x.setDate(x.getDate() + d); S.ui.adate = ymd(x); }
+
+$app.addEventListener('click', ev => {
+  const el = ev.target.closest('[data-act]');
+  if (!el) return;
+  const a = el.dataset.act, v = V();
+  switch (a) {
+    case 'in': case 'out': case 'bstart': case 'bend': case 'undo': return punch(a);
+    case 'edit': return openEdit(el.dataset.a, el.dataset.d);
+    case 'modal-close': return closeModal();
+    case 'e-save': return saveEdit();
+    case 'e-status': S.ui.edit.rec.status = el.dataset.v; return renderNow();
+    case 'e-b-add': S.ui.edit.rec.breaks.push({ start:'12:00', end:'13:00' }); return renderNow();
+    case 'e-b-del': S.ui.edit.rec.breaks.splice(+el.dataset.i, 1); return renderNow();
+    case 'tab': S.ui.tab = el.dataset.v; return renderNow();
+    case 'atab': S.ui.atab = el.dataset.v; S.ui.member = null; return renderNow();
+    case 'mprev': shiftMonth(el.dataset.s, -1); return renderNow();
+    case 'mnext': shiftMonth(el.dataset.s, 1); return renderNow();
+    case 'dprev': shiftDay(-1); return renderNow();
+    case 'dnext': shiftDay(1); return renderNow();
+    case 'dtoday': S.ui.adate = ymd(new Date()); return renderNow();
+    case 'member': ev.stopPropagation(); S.ui.atab = 'month'; S.ui.member = el.dataset.a; S.ui.amonth = firstOfMonth(parseYmd(S.ui.adate)); return renderNow();
+    case 'member-back': S.ui.member = null; return renderNow();
+    case 'csv-me': return downloadCsv(csvFor([SELF], S.ui.month, false), `kintai_${mTag(S.ui.month)}.csv`);
+    case 'csv-all': if (v.rep !== SELF) return; return downloadCsv(csvFor(memberList(v).map(m => m.addr), S.ui.amonth, true), `kintai_all_${mTag(S.ui.amonth)}.csv`);
+    case 'csv-all-day': {
+      if (v.rep !== SELF) return;
+      const m = firstOfMonth(parseYmd(S.ui.adate));
+      return downloadCsv(csvFor(memberList(v).map(x => x.addr), m, true), `kintai_all_${mTag(m)}.csv`);
+    }
+    case 'csv-member': if (v.rep !== SELF) return; return downloadCsv(csvFor([S.ui.member], S.ui.amonth, true), `kintai_${safeName(nameOf(v, S.ui.member))}_${mTag(S.ui.amonth)}.csv`);
+    case 'clear-ask': S.ui.confirmClear = true; return renderNow();
+    case 'clear-do':
+      if (!needReady()) return;
+      S.ui.confirmClear = false; S.noteDraft = null;
+      send({ k:'clear', a:SELF }); return toast(t('cleared'));
+    case 'rep-claim': return repOp('claim');
+    case 'rep-release': return repOp('release');
+    case 'rep-transfer': { const s = document.getElementById('xfer'); if (s && s.value) repOp('transfer', s.value); return; }
+  }
+});
+$app.addEventListener('input', ev => {
+  const f = ev.target.dataset && ev.target.dataset.f;
+  if (!f) return;
+  const val = ev.target.value;
+  if (f === 'note') {
+    S.noteDraft = val;
+    clearTimeout(S.noteTimer); S.noteTimer = setTimeout(flushNote, 800);
+  } else if (f.startsWith('e.') && S.ui.edit) {
+    const rec = S.ui.edit.rec, p = f.split('.');
+    if (p[1] === 'b') rec.breaks[+p[2]][p[3]] = val; else rec[p[1]] = val;
+    const [c, b] = calcText(rec);
+    const ec = document.getElementById('ecalc'), eb = document.getElementById('ebrk');
+    if (ec) ec.textContent = c; if (eb) eb.textContent = b;
+  }
+});
+$app.addEventListener('change', ev => {
+  const f = ev.target.dataset && ev.target.dataset.f;
+  if (f === 'language') { flushNote(); I18N.setLanguage(ev.target.value); renderNow(); }
+  else if (f === 'adate' && /^\d{4}-\d{2}-\d{2}$/.test(ev.target.value)) { S.ui.adate = ev.target.value; renderNow(); }
+  else if (f === 'logFilter') { S.ui.logFilter = ev.target.value; renderNow(); }
+});
+$app.addEventListener('focusout', ev => { if (ev.target.dataset && ev.target.dataset.f === 'note') flushNote(); });
+
+/* ================= 起動 ================= */
+function afterReplay() {
+  if (S.ready) return;
+  S.ready = true;
+  const v = V();
+  if (!v.members[SELF] || v.members[SELF].name !== SELF_NAME) send({ k:'hello', a:SELF, n:SELF_NAME });
+  migrateV1();
+  renderNow();
+}
+function migrateV1() {           // 旧バージョン(v1)の端末内データがあれば取り込む
+  try {
+    if (localStorage.getItem('webxdc-kintai-v2-migrated')) return;
+    const raw = localStorage.getItem('webxdc-kintai-v1');
+    localStorage.setItem('webxdc-kintai-v2-migrated', '1');
+    if (!raw) return;
+    const old = JSON.parse(raw), v = V();
+    for (const d of Object.keys(old)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || recOf(v, SELF, d)) continue;
+      const r = normRec(old[d]); if (r) sendRec(SELF, d, r, 'import');
+    }
+  } catch (e) {}
+}
+function onUpdate(u) {
+  if (u && addEvent(u.payload)) renderSoon();
+}
+try {
+  Promise.resolve(wx.setUpdateListener(onUpdate, 0)).then(afterReplay, afterReplay);
+} catch (e) { console.error(e); afterReplay(); }
+setTimeout(afterReplay, 4000);   // 通知が来ない環境でも操作可能にする
+
+setInterval(() => {
+  S.now = new Date();
+  const c = document.getElementById('clk'); if (c) c.textContent = hms(S.now);
+  if (S.now.getMinutes() !== S.lastMinute) { S.lastMinute = S.now.getMinutes(); renderSoon(); }
+}, 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { S.now = new Date(); renderSoon(); } });
+renderNow();
+window.__kintai = { S, V, derive, addEvent, send, SELF, openEdit, punch };   // 動作確認用
+})();
+</script>
+</body>
+</html>
